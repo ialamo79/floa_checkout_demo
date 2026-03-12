@@ -1,0 +1,432 @@
+/* global initFloaWidget, floa_widget_config */
+const $ = (sel) => document.querySelector(sel);
+
+const amountEl = $("#amount");
+const countryEl = $("#country");
+const continueBtn = $("#continue");
+const statusEl = $("#status");
+const debugEl = $("#debug");
+
+const btn3_nf = $("#btn3_nf");
+const btn4_nf = $("#btn4_nf");
+const btn3_f = $("#btn3_f");
+const btn4_f = $("#btn4_f");
+const btn10_nf = $("#btn10_nf"); // NUEVO
+
+let selected = { plan: null, feeMode: null };
+
+const I18N = {
+  ES: {
+    title: "Checkout",
+    subtitle: "Demo con Widget Standalone + flujo API (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Importe (€)",
+    country: "País",
+    selectPayment: "Selecciona un método de pago",
+    pay3_nf: "Pagar en 3 plazos con Floa (sin gastos)",
+    pay4_nf: "Pagar en 4 plazos con Floa (sin gastos)",
+    pay3_f: "Pagar en 3 plazos con Floa (con gastos)",
+    pay4_f: "Pagar en 4 plazos con Floa (con gastos)",
+    pay10_nf: "Pagar en 10 plazos con Floa (sin gastos)", // NUEVO
+    cont: "Continuar",
+    working: "Iniciando pago…",
+    err: "Error"
+  },
+  FR: {
+    title: "Paiement",
+    subtitle: "Démo Widget Standalone + flux API (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Montant (€)",
+    country: "Pays",
+    selectPayment: "Choisissez un moyen de paiement",
+    pay3_nf: "Payer en 3 fois avec Floa (sans frais)",
+    pay4_nf: "Payer en 4 fois avec Floa (sans frais)",
+    pay3_f: "Payer en 3 fois avec Floa (avec frais)",
+    pay4_f: "Payer en 4 fois avec Floa (avec frais)",
+    pay10_nf: "Payer en 10 fois avec Floa (sans frais)", // NUEVO
+    cont: "Continuer",
+    working: "Démarrage du paiement…",
+    err: "Erreur"
+  },
+  IT: {
+    title: "Checkout",
+    subtitle: "Demo Widget Standalone + flusso API (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Importo (€)",
+    country: "Paese",
+    selectPayment: "Seleziona un metodo di pagamento",
+    pay3_nf: "Paga in 3 rate con Floa (senza costi)",
+    pay4_nf: "Paga in 4 rate con Floa (senza costi)",
+    pay3_f: "Paga in 3 rate con Floa (con costi)",
+    pay4_f: "Paga in 4 rate con Floa (con costi)",
+    pay10_nf: "Paga in 10 rate con Floa (senza costi)", // NUEVO
+    cont: "Continua",
+    working: "Avvio pagamento…",
+    err: "Errore"
+  },
+  PT: {
+    title: "Checkout",
+    subtitle: "Demo Widget Standalone + fluxo API (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Valor (€)",
+    country: "País",
+    selectPayment: "Escolha um método de pagamento",
+    pay3_nf: "Pagar em 3 prestações com a Floa (sem custos)",
+    pay4_nf: "Pagar em 4 prestações com a Floa (sem custos)",
+    pay3_f: "Pagar em 3 prestações com a Floa (com custos)",
+    pay4_f: "Pagar em 4 prestações com a Floa (com custos)",
+    pay10_nf: "Pagar em 10 prestações com a Floa (sem custos)", // NUEVO
+    cont: "Continuar",
+    working: "A iniciar pagamento…",
+    err: "Erro"
+  },
+  BE: {
+    title: "Paiement",
+    subtitle: "Démo Widget Standalone + flux API (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Montant (€)",
+    country: "Pays",
+    selectPayment: "Choisissez un moyen de paiement",
+    pay3_nf: "Payer en 3 fois avec Floa (sans frais)",
+    pay4_nf: "Payer en 4 fois avec Floa (sans frais)",
+    pay3_f: "Payer en 3 fois avec Floa (avec frais)",
+    pay4_f: "Payer en 4 fois avec Floa (avec frais)",
+    pay10_nf: "Payer en 10 fois avec Floa (sans frais)", // NUEVO
+    cont: "Continuer",
+    working: "Démarrage du paiement…",
+    err: "Erreur"
+  },
+  NL: {
+    title: "Afrekenen",
+    subtitle: "Demo Widget Standalone + API-flow (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Bedrag (€)",
+    country: "Land",
+    selectPayment: "Kies een betaalmethode",
+    pay3_nf: "Betaal in 3 termijnen met Floa (zonder kosten)",
+    pay4_nf: "Betaal in 4 termijnen met Floa (zonder kosten)",
+    pay3_f: "Betaal in 3 termijnen met Floa (met kosten)",
+    pay4_f: "Betaal in 4 termijnen met Floa (met kosten)",
+    pay10_nf: "Betaal in 10 termijnen met Floa (zonder kosten)", // NUEVO
+    cont: "Doorgaan",
+    working: "Betaling starten…",
+    err: "Fout"
+  },
+  DE: {
+    title: "Kasse",
+    subtitle: "Demo Widget Standalone + API-Flow (Authentication → Deal Eligibility FilePage → Finalize).",
+    amount: "Betrag (€)",
+    country: "Land",
+    selectPayment: "Zahlungsmethode auswählen",
+    pay3_nf: "In 3 Raten mit Floa zahlen (ohne Gebühren)",
+    pay4_nf: "In 4 Raten mit Floa zahlen (ohne Gebühren)",
+    pay3_f: "In 3 Raten mit Floa zahlen (mit Gebühren)",
+    pay4_f: "In 4 Raten mit Floa zahlen (mit Gebühren)",
+    pay10_nf: "In 10 Raten mit Floa zahlen (ohne Gebühren)", // NUEVO
+    cont: "Weiter",
+    working: "Zahlung wird gestartet…",
+    err: "Fehler"
+  }
+};
+
+function localeForCountry(cc) {
+  const map = { FR: "FR", ES: "ES", IT: "IT", PT: "PT", BE: "FR", NL: "NL", DE: "DE" };
+  return map[cc] || "EN";
+}
+
+function amountToCents() {
+  const n = Number(amountEl.value);
+  return Math.round(n * 100);
+}
+
+// Producto por país/plan/modo
+function productCodeFor(cc, plan, feeMode) {
+  if (plan === "10x") {
+    // Solo FR, sin gastos
+    return cc === "FR" && feeMode === "noFees" ? "BC10XF" : null;
+  }
+  if (cc === "FR") {
+    if (plan === "3x") return feeMode === "withFees" ? "BC3XC" : "BC3XF";
+    return feeMode === "withFees" ? "BC4XC" : "BC4XF";
+  }
+  const num = plan === "3x" ? "3" : "4";
+  const mid = feeMode === "withFees" ? "XC" : "XF";
+  return `BC${num}${mid}${cc}`;
+}
+
+function applyI18n() {
+  const cc = countryEl.value;
+  const t = I18N[cc] || I18N.ES;
+  document.documentElement.lang = (cc === "FR" || cc === "BE") ? "fr" : cc.toLowerCase();
+  $("#title").textContent = t.title;
+  $("#subtitle").textContent = t.subtitle;
+  $("#lblAmount").textContent = t.amount;
+  $("#lblCountry").textContent = t.country;
+  $("#selectPayment").textContent = t.selectPayment;
+  $("#lbl3_nf").textContent = t.pay3_nf;
+  $("#lbl4_nf").textContent = t.pay4_nf;
+  $("#lbl3_f").textContent = t.pay3_f;
+  $("#lbl4_f").textContent = t.pay4_f;
+  const lbl10 = $("#lbl10_nf");
+  if (lbl10) lbl10.textContent = t.pay10_nf; // NUEVO
+}
+
+/* ------------------------------
+   WIDGETS: Re-inicialización segura
+-------------------------------*/
+function hardResetWidgetsDOM() {
+  const selectors = [
+    '.widget[data-floa-3-nofees]',
+    '.widget[data-floa-4-nofees]',
+    '.widget[data-floa-3-fees]',
+    '.widget[data-floa-4-fees]',
+    '.widget[data-floa-10-nofees]' // NUEVO
+  ];
+  selectors.forEach((sel) => {
+    document.querySelectorAll(sel).forEach((el) => {
+      const clone = el.cloneNode(false);
+      el.parentNode.replaceChild(clone, el);
+    });
+  });
+}
+
+function initWidget(selector, cc, cents, offers) {
+  const cfg = {
+    ...window.floa_widget_config,
+    custom_selector: selector,
+    amount: cents,
+    country: cc,
+    locale: localeForCountry(cc),
+    offers
+  };
+  window.initFloaWidget(cfg);
+}
+
+function toggle10xButton(show) {
+  if (!btn10_nf) return;
+  btn10_nf.style.display = show ? "" : "none";
+  if (!show && selected.plan === "10x") {
+    clearSelection();
+  }
+}
+
+function initWidgets() {
+  const cc = countryEl.value;
+  const cents = amountToCents();
+
+  hardResetWidgetsDOM();
+
+  // 3x/4x (siempre)
+  initWidget('[data-floa-3-nofees]', cc, cents, [productCodeFor(cc, "3x", "noFees")]);
+  initWidget('[data-floa-4-nofees]', cc, cents, [productCodeFor(cc, "4x", "noFees")]);
+  initWidget('[data-floa-3-fees]',   cc, cents, [productCodeFor(cc, "3x", "withFees")]);
+  initWidget('[data-floa-4-fees]',   cc, cents, [productCodeFor(cc, "4x", "withFees")]);
+
+  // 10x sin gastos (solo FR)
+  if (cc === "FR") {
+    toggle10xButton(true);
+    initWidget('[data-floa-10-nofees]', cc, cents, ["BC10XF"]);
+  } else {
+    toggle10xButton(false);
+  }
+}
+
+function clearSelection() {
+  selected = { plan: null, feeMode: null };
+  [btn3_nf, btn4_nf, btn3_f, btn4_f, btn10_nf].forEach((b) => b && b.classList.remove("selected"));
+  continueBtn.disabled = true;
+}
+
+function setSelected(plan, feeMode, btn) {
+  selected = { plan, feeMode };
+  [btn3_nf, btn4_nf, btn3_f, btn4_f, btn10_nf].forEach((b) => b && b.classList.remove("selected"));
+  btn.classList.add("selected");
+  continueBtn.disabled = false;
+}
+
+/* ===== Datos del cliente (incluye taxIdNumber + zipCode por país) ===== */
+const c = {
+  trustLevel: $("#c_trustLevel"),
+  firstName: $("#c_firstName"),
+  lastName: $("#c_lastName"),
+  birthDate: $("#c_birthDate"),
+  mobile: $("#c_mobile"),
+  email: $("#c_email"),
+  birthCountryCode: $("#c_birthCountryCode"),
+  birthCity: $("#c_birthCity"),
+  addr_line1: $("#c_addr_line1"),
+  addr_zip: $("#c_addr_zip"),
+  addr_city: $("#c_addr_city"),
+  addr_cc: $("#c_addr_cc"),
+  taxIdNumber: $("#c_taxIdNumber"),
+  preview: $("#customer_preview")
+};
+
+function deepMerge(a = {}, b = {}) {
+  const out = { ...a };
+  for (const [k, v] of Object.entries(b)) {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      out[k] = deepMerge(a[k] || {}, v);
+    } else if (v !== "" && v !== undefined) {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+function uiCustomerDefaults(cc) {
+  const taxByCc = {
+    ES: "46837840L",
+    IT: "TRNMRT78P25D122N",
+    PT: "246058803",
+    BE: "10.12.06.199.41",
+    NL: "999999990"
+  };
+  const zipByCc = {
+    ES: "28830",
+    FR: "33000",
+    IT: "20019",
+    PT: "1000-001",
+    BE: "1000",
+    NL: "1011AB",
+    DE: "40212"
+  };
+  const base = {
+    trustLevel: "Trusted",
+    firstName: "Test",
+    lastName: "User",
+    birthDate: "1979-07-16",
+    mobilePhoneNumber: "+33654321098",
+    email: "ivan.delalamohernandez@floa.com",
+    birthCountryCode: "ES",
+    birthCity: "Madrid",
+    homeAddress: {
+      line1: "1 Main street",
+      zipCode: zipByCc[cc] || "33000",
+      city: "Bordeaux",
+      countryCode: cc
+    }
+  };
+  if (taxByCc[cc]) base.taxIdNumber = taxByCc[cc];
+  return base;
+}
+
+function readCustomerFromUI() {
+  const payload = {
+    trustLevel: c.trustLevel.value,
+    firstName: c.firstName.value,
+    lastName: c.lastName.value,
+    birthDate: c.birthDate.value,
+    mobilePhoneNumber: c.mobile.value,
+    email: c.email.value,
+    birthCountryCode: c.birthCountryCode.value,
+    birthCity: c.birthCity.value,
+    homeAddress: {
+      line1: c.addr_line1.value,
+      zipCode: c.addr_zip.value,
+      city: c.addr_city.value,
+      countryCode: (c.addr_cc.value || "").toUpperCase()
+    }
+  };
+  const tax = (c.taxIdNumber.value || "").trim();
+  if (tax) payload.taxIdNumber = tax;
+  return payload;
+}
+
+function writeCustomerToUI(customer) {
+  c.trustLevel.value = customer.trustLevel || "Trusted";
+  c.firstName.value = customer.firstName || "";
+  c.lastName.value = customer.lastName || "";
+  c.birthDate.value = customer.birthDate || "1979-07-16";
+  c.mobile.value = customer.mobilePhoneNumber || "";
+  c.email.value = customer.email || "";
+
+  c.birthCountryCode.value = customer.birthCountryCode || "";
+  c.birthCity.value = customer.birthCity || "";
+
+  c.addr_line1.value = customer.homeAddress?.line1 || "";
+  c.addr_zip.value = customer.homeAddress?.zipCode || "";
+  c.addr_city.value = customer.homeAddress?.city || "";
+  c.addr_cc.value = customer.homeAddress?.countryCode || "";
+
+  c.taxIdNumber.value = customer.taxIdNumber || "";
+  renderCustomerPreview();
+}
+
+function renderCustomerPreview() {
+  const cc = countryEl.value;
+  const merged = deepMerge(uiCustomerDefaults(cc), readCustomerFromUI());
+  if (c.preview) c.preview.textContent = JSON.stringify(merged, null, 2);
+}
+
+/* ===== Envío al backend ===== */
+async function startPayment() {
+  const cc = countryEl.value;
+  const amountMajor = Number(amountEl.value);
+  const t = I18N[cc] || I18N.ES;
+
+  statusEl.textContent = t.working;
+  statusEl.className = "status working";
+  debugEl.textContent = "";
+
+  try {
+    const resp = await fetch("/api/start-payment", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        amountMajor,
+        countryCode: cc,
+        plan: selected.plan,
+        feeMode: selected.feeMode,
+        customerOverrides: readCustomerFromUI()
+      })
+    });
+
+    const data = await resp.json();
+    debugEl.textContent = JSON.stringify(data, null, 2);
+
+    if (!resp.ok) {
+      statusEl.textContent = `${t.err}: ${data.step || data.error || resp.status}`;
+      statusEl.className = "status error";
+      return;
+    }
+
+    statusEl.textContent = "OK → redirigiendo…";
+    statusEl.className = "status ok";
+    window.location.href = data.redirectUrl;
+  } catch (e) {
+    statusEl.textContent = `${t.err}: ${e.message}`;
+    statusEl.className = "status error";
+  }
+}
+
+/* ===== Listeners ===== */
+btn3_nf.addEventListener("click", () => setSelected("3x", "noFees", btn3_nf));
+btn4_nf.addEventListener("click", () => setSelected("4x", "noFees", btn4_nf));
+btn3_f.addEventListener("click", () => setSelected("3x", "withFees", btn3_f));
+btn4_f.addEventListener("click", () => setSelected("4x", "withFees", btn4_f));
+btn10_nf.addEventListener("click", () => setSelected("10x", "noFees", btn10_nf)); // NUEVO
+
+continueBtn.addEventListener("click", startPayment);
+
+// Al cambiar país: i18n + re-render widgets + defaults UI + limpiar selección si 10x ya no aplica
+countryEl.addEventListener("change", () => {
+  applyI18n();
+  initWidgets();
+  clearSelection();
+  writeCustomerToUI(uiCustomerDefaults(countryEl.value));
+});
+
+amountEl.addEventListener("input", () => {
+  initWidgets();
+  clearSelection();
+});
+
+// Preview al editar cualquier campo de cliente
+[
+  c.trustLevel, c.firstName, c.lastName, c.birthDate, c.mobile, c.email,
+  c.birthCountryCode, c.birthCity, c.addr_line1, c.addr_zip, c.addr_city, c.addr_cc,
+  c.taxIdNumber
+].forEach((el) => el?.addEventListener("input", renderCustomerPreview));
+
+// Init
+window.addEventListener("DOMContentLoaded", () => {
+  applyI18n();
+  initWidgets();
+  clearSelection();
+  writeCustomerToUI(uiCustomerDefaults(countryEl.value));
+});

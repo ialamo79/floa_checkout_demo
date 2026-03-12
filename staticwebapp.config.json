@@ -1,0 +1,145 @@
+// Deals Eligibility payload builder (customerInformationForm)
+
+export function cultureForCountry(countryCode) {
+  const cc = (countryCode || "").toUpperCase();
+  const map = {
+    FR: "fr-FR",
+    ES: "es-ES",
+    IT: "it-IT",
+    PT: "pt-PT",
+    BE: "fr-BE",
+    NL: "nl-NL",
+    DE: "de-DE"
+  };
+  return map[cc] || "en-GB";
+}
+
+function merchantReference() {
+  return String(Date.now()).slice(-10);
+}
+
+// Pequeño deepMerge para combinar overrides de cliente
+function deepMerge(target = {}, source = {}) {
+  const out = { ...target };
+  for (const [k, v] of Object.entries(source || {})) {
+    if (v && typeof v === "object" && !Array.isArray(v)) {
+      out[k] = deepMerge(target[k] || {}, v);
+    } else {
+      out[k] = v;
+    }
+  }
+  return out;
+}
+
+// --- NUEVO: zip por país para shippingAddress ---
+function shippingZipForCountry(countryCode) {
+  const cc = (countryCode || "").toUpperCase();
+  const zipByCc = {
+    ES: "28830",
+    FR: "33000",
+    IT: "20019",
+    PT: "1000-001",
+    BE: "1000",
+    NL: "1011AB",
+    DE: "40212"
+  };
+  // Fallback razonable si llega un país no contemplado
+  return zipByCc[cc] || "33000";
+}
+
+function countrySpecificCustomer(countryCode) {
+  const cc = (countryCode || "").toUpperCase();
+
+  // Defaults de taxId por país (se usan en algunos países)
+  const taxIdByCountry = {
+    ES: "46837840L",
+    IT: "TRNMRT78P25D122N",
+    PT: "246058803",
+    BE: "10.12.06.199.41",
+    NL: "999999990"
+    // FR/DE sin valor por defecto
+  };
+
+  const base = {
+    trustLevel: "Trusted",
+    firstName: "Test",
+    lastName: "User",
+    birthDate: "1979-07-16",
+    mobilePhoneNumber: "+33654321098",
+    email: "ivan.delalamohernandez@floa.com",
+    birthCountryCode: "ES",
+    birthCity: "Madrid",
+    homeAddress: {
+      line1: "1 Main street",
+      // El zipCode de homeAddress lo gestionas desde el frontend (UI defaults) y puede entrar como override.
+      zipCode: "33000",
+      city: "Bordeaux",
+      countryCode: cc
+    },
+    history: {
+      createdDate: "2019-06-16T12:42:16",
+      firstOrderDate: "2019-07-16T12:42:16",
+      lastOrderDate: "2023-07-16T12:42:16",
+      validatedOrderCount: 3,
+      validatedOrderAmount: 500,
+      canceledOrderCount: 1
+    }
+  };
+
+  if (cc === "FR") {
+    return {
+      ...base,
+      civility: "Mr",
+      birthDepartment: "75",
+      birthCountryCode: "ES",
+      birthCity: "Madrid"
+    };
+  }
+
+  if (taxIdByCountry[cc]) {
+    return { ...base, taxIdNumber: taxIdByCountry[cc] };
+  }
+
+  return base;
+}
+
+export function buildDealPayload(
+  { countryCode, merchantFinancedAmount, itemCount = 1 },
+  customerOverrides = null
+) {
+  const cc = (countryCode || "").toUpperCase();
+  const ts = new Date().toISOString();
+
+  // Customer base según país + posibles overrides desde el checkout
+  const baseCustomer = countrySpecificCustomer(cc);
+  const customer = customerOverrides ? deepMerge(baseCustomer, customerOverrides) : baseCustomer;
+
+  return {
+    merchantReference: merchantReference(),
+    device: "Desktop",
+    shippingMethod: "CDS",
+    shippingAddress: {
+      line1: "1 Rue de la Paix",
+      line2: "Bâtiment A2",
+      // --- CAMBIO: zip dinámico por país ---
+      zipCode: shippingZipForCountry(cc),
+      city: "Bordeaux",
+      countryCode: cc
+    },
+    merchantFinancedAmount,
+    itemCount,
+    items: [
+      {
+        name: "Demo product",
+        amount: merchantFinancedAmount,
+        category: "Demo",
+        subCategory: "Checkout"
+      }
+    ],
+    customers: [customer],
+    metadata: [
+      { key: "DepartureDate", value: ts },
+      { key: "TotalAmount", value: merchantFinancedAmount }
+    ]
+  };
+}
